@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1078441269956",
+    "project_id": "app-e-reading",
+    "storage_bucket": "app-e-reading.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1078441269956:android:934c67f4e6ed8b11b94791",
+        "android_client_info": {
+          "package_name": "com.example.e_reading"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDEcNvKQ524FYsulW_vcVxYwZWVpm7cm9k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
