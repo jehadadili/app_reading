@@ -123,8 +123,9 @@ class AdminCreateCrl extends GetxController {
       // When English is selected, set default empty values for Arabic fields
       if (bookModel.title_ar.isEmpty) bookModel.title_ar = "Default";
       if (bookModel.author_ar.isEmpty) bookModel.author_ar = "Default";
-      if (bookModel.description_ar.isEmpty)
+      if (bookModel.description_ar.isEmpty) {
         bookModel.description_ar = "Default";
+      }
     }
 
     // Validate common fields

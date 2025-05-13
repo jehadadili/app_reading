@@ -3,16 +3,21 @@ import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:e_reading/src/core/utils/app_strings.dart';
 import 'package:e_reading/src/core/utils/my_aleart_dialog.dart';
+import 'package:e_reading/src/features/admin/view/admin_view.dart';
 import 'package:e_reading/src/features/auth/model/user_model.dart';
+import 'package:e_reading/src/features/auth/view/login/screen/login_screen.dart';
+import 'package:e_reading/src/features/home/home_view.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class AuthCrl extends GetxController {
-  GlobalKey<FormState> loginFormKey = GlobalKey<FormState>();
-  GlobalKey<FormState> forgotpasswordKey = GlobalKey<FormState>();
-  GlobalKey<FormState> signupFormKey = GlobalKey<FormState>();
+  // لا تستخدم نفس الـ GlobalKey في أكثر من مكان
+  GlobalKey<FormState> loginFormKey = GlobalKey<FormState>(); // فورم الدخول
+  GlobalKey<FormState> forgotpassword = GlobalKey<FormState>(); // فورم الدخول
+  GlobalKey<FormState> signupFormKey = GlobalKey<FormState>(); // فورم التسجيل
 
+  ///----User Model
   UserModel userModel = UserModel(
     id: '',
     email: '',
@@ -23,9 +28,11 @@ class AuthCrl extends GetxController {
   );
   String userId = '';
 
+  // المتغيرات الخاصة بعملية التحميل والظهور
   bool isLoading = false;
   bool isVisable = true;
 
+  // تحديث القيم
   void setEmail(String newVal) {
     userModel.email = newVal;
     update();
@@ -61,6 +68,7 @@ class AuthCrl extends GetxController {
     update();
   }
 
+  // مسح البيانات
   void clearData() {
     userModel = UserModel(
       id: '',
@@ -70,57 +78,58 @@ class AuthCrl extends GetxController {
       cpassword: '',
       isAdmin: false,
     );
-    userId = '';
-    isLoading = false;
-    isVisable = true;
     update();
   }
 
+  // دالة التسجيل
+  // دالة التسجيل
   Future<void> signUp(BuildContext context) async {
     FocusScope.of(context).unfocus();
-    if (!signupFormKey.currentState!.validate()) {
-      return;
-    }
     signupFormKey.currentState!.save();
+    final bool isValid = signupFormKey.currentState!.validate();
 
     try {
       if (!userModel.email.isEmail) {
         myAleartDialog(text: 'Please enter a valid email');
-        return;
       } else if (userModel.username.isEmpty) {
         myAleartDialog(text: 'Please enter your name');
-        return;
-      } else if (userModel.password.length <= 6) {
+      } else if (userModel.password.length <= 6 &&
+          userModel.cpassword.length <= 6) {
         myAleartDialog(text: 'Password must be 6 characters at least');
-        return;
       } else if (userModel.password != userModel.cpassword) {
         myAleartDialog(text: 'Passwords do not match');
-        return;
+      } else if (isValid) {
+        setIsLoading(true);
+        await FirebaseAuth.instance
+            .createUserWithEmailAndPassword(
+              email: userModel.email,
+              password: userModel.password,
+            )
+            .then((UserCredential userCedential) {
+              userModel.id = userCedential.user!.uid;
+
+              setUserId(userCedential.user!.uid);
+
+              DocumentReference ref = FirebaseFirestore.instance
+                  .collection(AppStrings.users)
+                  .doc(userCedential.user!.uid);
+
+              ref.set(userModel.toMap()).then((val) {
+                log('OK');
+
+                // توجيه المستخدم إلى صفحة تسجيل الدخول بعد نجاح التسجيل
+                clearData(); // مسح البيانات أولاً
+                Get.off(
+                  () => LoginScreen(),
+                ); // استخدام Get.off للانتقال إلى صفحة الدخول
+              });
+              setIsLoading(false);
+            });
       }
-
-      setIsLoading(true);
-      UserCredential userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-            email: userModel.email,
-            password: userModel.password,
-          );
-
-      userModel.id = userCredential.user!.uid;
-      await userCredential.user!.updateDisplayName(userModel.username);
-      await userCredential.user!.reload(); // Refresh Firebase user data
-
-      setUserId(
-        userCredential.user!.uid,
-      ); // Updates AuthCrl.userId (consider if needed)
-
-      DocumentReference ref = FirebaseFirestore.instance
-          .collection(AppStrings.users)
-          .doc(userCredential.user!.uid);
-      await ref.set(userModel.toMap());
-
-      log('User created successfully. Firestore document written.');
     } on FirebaseAuthException catch (e) {
-      log('SignUp FirebaseAuthException: ${e.toString()}');
+      setIsLoading(false);
+      log(e.toString());
+
       if (e.code == 'weak-password') {
         myAleartDialog(text: 'The password provided is too weak.');
       } else if (e.code == 'email-already-in-use') {
@@ -128,124 +137,116 @@ class AuthCrl extends GetxController {
       } else if (e.code == 'invalid-email') {
         myAleartDialog(text: 'The email address is badly formatted.');
       } else {
-        myAleartDialog(text: e.message ?? 'An error occurred during sign up.');
+        log(e.toString());
       }
-    } catch (e) {
-      log('SignUp general error: ${e.toString()}');
-      myAleartDialog(text: 'An unexpected error occurred during sign up.');
-    } finally {
-      setIsLoading(false);
-      update(); // Ensure UI updates (e.g., loading indicator stops)
     }
   }
 
+  // دالة تسجيل الدخول
+  // دالة تسجيل الدخول
   Future<void> logIn(BuildContext context) async {
     FocusScope.of(context).unfocus();
-    if (!loginFormKey.currentState!.validate()) {
-      return; // Validation failed
-    }
     loginFormKey.currentState!.save();
+    final bool isValid = loginFormKey.currentState!.validate();
 
     try {
       if (!userModel.email.isEmail) {
         myAleartDialog(text: 'Please enter a valid email');
-        return;
       } else if (userModel.password.length <= 6) {
         myAleartDialog(text: 'Passwords must be 6 characters at least');
-        return;
-      }
+      } else if (isValid) {
+        setIsLoading(true);
 
-      setIsLoading(true);
-      UserCredential userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(
-            email: userModel.email,
-            password: userModel.password,
-          );
+        await FirebaseAuth.instance
+            .signInWithEmailAndPassword(
+              email: userModel.email,
+              password: userModel.password,
+            )
+            .then((UserCredential userCedential) async {
+              // تعيين userId عند تسجيل الدخول
+              setUserId(userCedential.user!.uid);
+              log('تم تعيين userId: ${userCedential.user!.uid}');
 
-      setUserId(userCredential.user!.uid);
-      log('User logged in. UID: ${userCredential.user!.uid}');
+              // يمكنك أيضًا جلب بيانات المستخدم من Firestore إذا كنت بحاجة إليها
+              DocumentSnapshot userDoc =
+                  await FirebaseFirestore.instance
+                      .collection(AppStrings.users)
+                      .doc(userCedential.user!.uid)
+                      .get();
 
-      DocumentSnapshot userDoc =
-          await FirebaseFirestore.instance
-              .collection(AppStrings.users)
-              .doc(userCredential.user!.uid)
-              .get();
+              if (userDoc.exists) {
+                // تحديث بيانات المستخدم إذا لزم الأمر
+                Map<String, dynamic> userData =
+                    userDoc.data() as Map<String, dynamic>;
+                userModel = UserModel.fromJson(userData);
+                userModel.id = userCedential.user!.uid;
+                update();
 
-      if (userDoc.exists) {
-        Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
-        _check_type_Map_String_dynamic(userData);
-        userModel = UserModel.fromJson(userData);
-        userModel.id = userCredential.user!.uid; // Ensure ID from auth is set
-      } else {
-        log(
-          "User document not found in Firestore for UID: ${userCredential.user!.uid}. Logging out.",
-        );
-        await FirebaseAuth.instance.signOut();
-        clearData();
-        myAleartDialog(
-          text:
-              'User data not found. Please contact support or try signing up.',
-        );
+                // التحقق إذا كان المستخدم مسؤول أم لا وتوجيهه إلى الصفحة المناسبة
+                if (userModel.isAdmin) {
+                  Get.offAll(() => const AdminView());
+                } else {
+                  Get.offAll(() => HomeScreen());
+                }
+              }
+
+              setIsLoading(false);
+            });
       }
     } on FirebaseAuthException catch (e) {
-      log("Login FirebaseAuthException: ${e.toString()}, code: ${e.code}");
-      if (e.code == 'user-not-found' ||
-          e.code == 'wrong-password' ||
-          e.code == 'invalid-credential') {
-        myAleartDialog(text: 'Invalid email or password.');
+      myAleartDialog(text: e.toString());
+      setIsLoading(false);
+      log(e.toString());
+
+      if (e.code == 'weak-password') {
+        myAleartDialog(text: 'The password provided is too weak.');
+      } else if (e.code == 'email-already-in-use') {
+        myAleartDialog(text: 'The account already exists for that email.');
       } else if (e.code == 'invalid-email') {
         myAleartDialog(text: 'The email address is badly formatted.');
       } else {
-        myAleartDialog(text: e.message ?? 'An error occurred during login.');
+        log(e.toString());
       }
-    } catch (e) {
-      log("Login general error: ${e.toString()}");
-      myAleartDialog(text: 'An unexpected error occurred during login.');
-    } finally {
-      setIsLoading(false);
-      update();
     }
   }
 
+  // دالة إعادة تعيين كلمة المرور
   Future<bool> resetPassword(BuildContext context) async {
     FocusScope.of(context).unfocus();
-    if (!forgotpasswordKey.currentState!.validate()) return false;
-    forgotpasswordKey.currentState!.save();
+    forgotpassword.currentState!.save();
+    final bool isValid = forgotpassword.currentState!.validate();
 
     try {
       if (!userModel.email.isEmail) {
         myAleartDialog(text: 'Please enter a valid email');
         return false;
+      } else if (isValid) {
+        setIsLoading(true);
+
+        await FirebaseAuth.instance
+            .sendPasswordResetEmail(email: userModel.email)
+            .then((_) {
+              setIsLoading(false);
+              Get.back();
+            });
+        return true;
       }
-      setIsLoading(true);
-      await FirebaseAuth.instance.sendPasswordResetEmail(
-        email: userModel.email,
-      );
-      myAleartDialog(text: 'Password reset email sent. Check your inbox.');
-      Get.back(); // Close the dialog/screen where reset was initiated
-      return true;
     } on FirebaseAuthException catch (e) {
-      myAleartDialog(text: e.message ?? 'An error occurred.');
-      log('ResetPassword error: ${e.toString()}');
-      return false;
-    } finally {
       setIsLoading(false);
+      myAleartDialog(text: e.message ?? 'An error occurred.');
+      log(e.toString());
+      return false;
     }
+    return false;
   }
 
   Future<void> signOut() async {
     try {
-      setIsLoading(true);
       await FirebaseAuth.instance.signOut();
-      clearData();
+      clearData(); // تمسح بيانات المستخدم
+      Get.offAll(() => const LoginScreen()); // يرجع على صفحة تسجيل الدخول
     } catch (e) {
       log('Error signing out: $e');
-      myAleartDialog(text: 'Error signing out. Please try again.');
-      setIsLoading(false);
-      update();
     }
   }
 }
-
-Map<String, dynamic> _check_type_Map_String_dynamic(Map<String, dynamic> map) =>
-    map;
