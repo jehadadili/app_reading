@@ -12,10 +12,24 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class AuthCrl extends GetxController {
-  // لا تستخدم نفس الـ GlobalKey في أكثر من مكان
-  GlobalKey<FormState> loginFormKey = GlobalKey<FormState>(); // فورم الدخول
-  GlobalKey<FormState> forgotpassword = GlobalKey<FormState>(); // فورم الدخول
-  GlobalKey<FormState> signupFormKey = GlobalKey<FormState>(); // فورم التسجيل
+  // Create new keys for each form instance
+  // These will be recreated when needed instead of being reused
+  GlobalKey<FormState> _loginFormKey = GlobalKey<FormState>();
+  GlobalKey<FormState> _forgotPasswordKey = GlobalKey<FormState>();
+  GlobalKey<FormState> _signupFormKey = GlobalKey<FormState>();
+
+  // Getters for the form keys
+  GlobalKey<FormState> get loginFormKey => _loginFormKey;
+  GlobalKey<FormState> get forgotPasswordKey => _forgotPasswordKey;
+  GlobalKey<FormState> get signupFormKey => _signupFormKey;
+
+  // Method to reset keys when navigating between forms
+  void resetFormKeys() {
+    _loginFormKey = GlobalKey<FormState>();
+    _forgotPasswordKey = GlobalKey<FormState>();
+    _signupFormKey = GlobalKey<FormState>();
+    update();
+  }
 
   ///----User Model
   UserModel userModel = UserModel(
@@ -82,7 +96,6 @@ class AuthCrl extends GetxController {
   }
 
   // دالة التسجيل
-  // دالة التسجيل
   Future<void> signUp(BuildContext context) async {
     FocusScope.of(context).unfocus();
     signupFormKey.currentState!.save();
@@ -119,6 +132,7 @@ class AuthCrl extends GetxController {
 
                 // توجيه المستخدم إلى صفحة تسجيل الدخول بعد نجاح التسجيل
                 clearData(); // مسح البيانات أولاً
+                resetFormKeys(); // Reset form keys
                 Get.off(
                   () => LoginScreen(),
                 ); // استخدام Get.off للانتقال إلى صفحة الدخول
@@ -142,7 +156,6 @@ class AuthCrl extends GetxController {
     }
   }
 
-  // دالة تسجيل الدخول
   // دالة تسجيل الدخول
   Future<void> logIn(BuildContext context) async {
     FocusScope.of(context).unfocus();
@@ -183,6 +196,7 @@ class AuthCrl extends GetxController {
                 update();
 
                 // التحقق إذا كان المستخدم مسؤول أم لا وتوجيهه إلى الصفحة المناسبة
+                resetFormKeys(); // Reset form keys before navigation
                 if (userModel.isAdmin) {
                   Get.offAll(() => const AdminView());
                 } else {
@@ -213,8 +227,8 @@ class AuthCrl extends GetxController {
   // دالة إعادة تعيين كلمة المرور
   Future<bool> resetPassword(BuildContext context) async {
     FocusScope.of(context).unfocus();
-    forgotpassword.currentState!.save();
-    final bool isValid = forgotpassword.currentState!.validate();
+    forgotPasswordKey.currentState!.save();
+    final bool isValid = forgotPasswordKey.currentState!.validate();
 
     try {
       if (!userModel.email.isEmail) {
@@ -227,6 +241,7 @@ class AuthCrl extends GetxController {
             .sendPasswordResetEmail(email: userModel.email)
             .then((_) {
               setIsLoading(false);
+              resetFormKeys(); // Reset form keys
               Get.back();
             });
         return true;
@@ -244,9 +259,17 @@ class AuthCrl extends GetxController {
     try {
       await FirebaseAuth.instance.signOut();
       clearData(); // تمسح بيانات المستخدم
+      resetFormKeys(); // Reset form keys
       Get.offAll(() => const LoginScreen()); // يرجع على صفحة تسجيل الدخول
     } catch (e) {
       log('Error signing out: $e');
     }
+  }
+
+  @override
+  void onInit() {
+    // Initialize new keys when controller is created
+    resetFormKeys();
+    super.onInit();
   }
 }

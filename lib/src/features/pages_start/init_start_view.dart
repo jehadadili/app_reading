@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:e_reading/src/core/style/color.dart';
 import 'package:e_reading/src/core/utils/app_strings.dart';
@@ -17,6 +16,12 @@ class InitStartView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get the AuthCrl instance
+    final AuthCrl authCrl = Get.find<AuthCrl>();
+
+    // Make sure form keys are reset when this view is built
+    authCrl.resetFormKeys();
+
     return StreamBuilder(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapShot) {
@@ -53,6 +58,8 @@ class InitStartView extends StatelessWidget {
                       if (userSnapshot.hasData) {
                         if (userSnapshot.data.data() == null ||
                             userSnapshot.data == null) {
+                          // Reset form keys before showing login screen
+                          authCrl.resetFormKeys();
                           return const LoginScreen();
                         } else {
                           authCrl.userModel = UserModel.fromJson(
@@ -76,6 +83,8 @@ class InitStartView extends StatelessWidget {
                     },
                   );
                 } else {
+                  // Reset form keys before showing login screen
+                  authCrl.resetFormKeys();
                   return const LoginScreen();
                 }
 

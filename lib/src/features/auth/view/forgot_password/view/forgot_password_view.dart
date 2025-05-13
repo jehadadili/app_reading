@@ -35,7 +35,7 @@ class ForgetPasswordPage extends StatelessWidget {
                   horizontal: MediaQuery.of(context).size.width * 0.08,
                 ),
                 child: Form(
-                  key: crl.forgotpassword,
+                  key: crl.forgotPasswordKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

@@ -22,7 +22,7 @@ class MyValidator {
     if (paswword == null || paswword.isEmpty) {
       return "paswword is requred";
     }
-    if (paswword.length <= 5) {
+    if (paswword.length <= 6) {
       return "pleas enter a valid id 6 number ";
     }
 
