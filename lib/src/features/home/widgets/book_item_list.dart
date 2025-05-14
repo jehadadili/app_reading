@@ -15,7 +15,7 @@ class BookItemList extends StatelessWidget {
 
     return Container(
       width: screenWidth * 0.45,
-      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),

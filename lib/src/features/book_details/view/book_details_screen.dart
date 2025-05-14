@@ -206,8 +206,9 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
       return;
     }
 
+    // تصحيح الخطأ هنا: إزالة الشرطة المائلة الزائدة قبل علامة الاقتباس الأخيرة
     final fileName =
-        '${widget.book.title.replaceAll(RegExp(r'[^\w\s]+\'), '')}.pdf';
+        '${widget.book.title.replaceAll(RegExp(r'[^\w\s]+'), '')}.pdf';
 
     _downloadManager.startDownload(
       context: context,
